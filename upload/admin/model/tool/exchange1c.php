@@ -81,6 +81,7 @@ class ModelToolExchange1c extends Model {
 					
 					$document['Документ' . $document_counter]['Товары']['Товар' . $product_counter] = array(
 						 'Ид'             => $id
+						,'Артикул'        => $product['model']
 						,'Наименование'   => $product['name']
 						,'ЦенаЗаЕдиницу'  => $product['price']
 						,'Количество'     => $product['quantity']
@@ -112,6 +113,58 @@ class ModelToolExchange1c extends Model {
 					$product_counter++;
 				}
 
+				//Доставка
+
+				$totals = $this->model_sale_order->getOrderTotals($orders_data['order_id']);
+
+				foreach ($totals as $total) {
+					if ($total['code']=='shipping') {
+
+						$document['Документ' . $document_counter]['Товары']['Товар' . $product_counter] = array(
+							 'Ид'         => ''
+							,'Наименование' => 'Доставка'
+							,'ЦенаЗаЕдиницу'=> $total['value']
+							,'Количество' => 1
+							,'Сумма'       => $total['value']
+						);
+					}
+				}
+
+				$data = $order;
+				
+				//Статус
+					 
+				$order_status = $this->model_sale_order->getOrderStatus($orders_data['order_id']); 
+							
+				$document['Документ' . $document_counter]['ЗначенияРеквизитов']['ЗначениеРеквизита0']= array(
+					'Наименование' => 'Статус заказа',
+					'Значение'=> $order_status,
+				);
+						
+				//Метод оплаты
+					 
+				$pay_status = $this->model_sale_order->getOrderPay($orders_data['order_id']); 
+							
+				$document['Документ' . $document_counter]['ЗначенияРеквизитов']['ЗначениеРеквизита1'] = array(
+					'Наименование' => 'Метод оплаты',
+					'Значение'=> $pay_status,
+				);
+					
+				//Способ доставки
+
+				$shipping_status = $this->model_sale_order->getOrderShipping($orders_data['order_id']); 
+							
+				$document['Документ' . $document_counter]['ЗначенияРеквизитов']['ЗначениеРеквизита2']= array(
+					'Наименование' => 'Способ доставки',
+					'Значение'=> $shipping_status,
+				);
+
+				$this->addOrderHistory($orders_data['order_id'], array(
+					'order_status_id' => $params['new_status'],
+					'comment'         => '',
+					'notify'          => $params['notify']
+				));			
+
 				$document_counter++;
 			}
 		}
@@ -124,8 +177,6 @@ class ModelToolExchange1c extends Model {
 
 	public function queryOrdersStatus($params){
 
-		$this->load->model('sale/order');
-
 		if ($params['exchange_status'] != 0) {
 			$query = $this->db->query("SELECT order_id FROM `" . DB_PREFIX . "order` WHERE `order_status_id` = " . $params['exchange_status'] . "");
 		} else {
@@ -134,7 +185,7 @@ class ModelToolExchange1c extends Model {
 
 		if ($query->num_rows) {
 			foreach ($query->rows as $orders_data) {
-				$this->model_sale_order->addOrderHistory($orders_data['order_id'], array(
+				$this->addOrderHistory($orders_data['order_id'], array(
 					'order_status_id' => $params['new_status'],
 					'comment'         => '',
 					'notify'          => $params['notify']
@@ -145,6 +196,76 @@ class ModelToolExchange1c extends Model {
 		return true;
 	}
 
+	public function addOrderHistory($order_id, $data) {
+
+		$this->load->model('sale/order');
+
+		$this->db->query("UPDATE `" . DB_PREFIX . "order` SET order_status_id = '" . (int)$data['order_status_id'] . "', date_modified = NOW() WHERE order_id = '" . (int)$order_id . "'");
+
+		$this->db->query("INSERT INTO " . DB_PREFIX . "order_history SET order_id = '" . (int)$order_id . "', order_status_id = '" . (int)$data['order_status_id'] . "', notify = '" . (isset($data['notify']) ? (int)$data['notify'] : 0) . "', comment = '" . $this->db->escape(strip_tags($data['comment'])) . "', date_added = NOW()");
+
+		$order_info = $this->model_sale_order->getOrder($order_id);
+
+		// Send out any gift voucher mails
+		if ($this->config->get('config_complete_status_id') == $data['order_status_id']) {
+			$this->load->model('sale/voucher');
+
+			$results = $this->model_sale_order->getOrderVouchers($order_id);
+
+			foreach ($results as $result) {
+				$this->model_sale_voucher->sendVoucher($result['voucher_id']);
+			}
+		}
+
+		if ($data['notify']) {
+			$language = new Language($order_info['language_directory']);
+			$language->load($order_info['language_filename']);
+			$language->load('mail/order');
+
+			$subject = sprintf($language->get('text_subject'), $order_info['store_name'], $order_id);
+
+			$message  = $language->get('text_order') . ' ' . $order_id . "\n";
+			$message .= $language->get('text_date_added') . ' ' . date($language->get('date_format_short'), strtotime($order_info['date_added'])) . "\n\n";
+
+			$order_status_query = $this->db->query("SELECT * FROM " . DB_PREFIX . "order_status WHERE order_status_id = '" . (int)$data['order_status_id'] . "' AND language_id = '" . (int)$order_info['language_id'] . "'");
+
+			if ($order_status_query->num_rows) {
+				$message .= $language->get('text_order_status') . "\n";
+				$message .= $order_status_query->row['name'] . "\n\n";
+			}
+
+			if ($order_info['customer_id']) {
+				$message .= $language->get('text_link') . "\n";
+				$message .= html_entity_decode($order_info['store_url'] . 'index.php?route=account/order/info&order_id=' . $order_id, ENT_QUOTES, 'UTF-8') . "\n\n";
+			}
+
+			if ($data['comment']) {
+				$message .= $language->get('text_comment') . "\n\n";
+				$message .= strip_tags(html_entity_decode($data['comment'], ENT_QUOTES, 'UTF-8')) . "\n\n";
+			}
+
+			$message .= $language->get('text_footer');
+
+			$mail = new Mail();
+			$mail->protocol = $this->config->get('config_mail_protocol');
+			$mail->parameter = $this->config->get('config_mail_parameter');
+			$mail->hostname = $this->config->get('config_smtp_host');
+			$mail->username = $this->config->get('config_smtp_username');
+			$mail->password = $this->config->get('config_smtp_password');
+			$mail->port = $this->config->get('config_smtp_port');
+			$mail->timeout = $this->config->get('config_smtp_timeout');
+			$mail->setTo($order_info['email']);
+			$mail->setFrom($this->config->get('config_email'));
+			$mail->setSender($order_info['store_name']);
+			$mail->setSubject(html_entity_decode($subject, ENT_QUOTES, 'UTF-8'));
+			$mail->setText(html_entity_decode($message, ENT_QUOTES, 'UTF-8'));
+			$mail->send();
+		}
+
+		$this->load->model('payment/amazon_checkout');
+		$this->model_payment_amazon_checkout->orderStatusChange($order_id, $data);
+		
+	}
 
 	function array_to_xml($data, &$xml) {
 
@@ -649,6 +770,8 @@ class ModelToolExchange1c extends Model {
 			),
 		);
 
+		$result['category_description'][$language_id]['meta_title'] = (isset($data['category_description'][$language_id]['meta_title'])) ? $data['category_description'][$language_id]['meta_title'] : '';
+
 		return $result;
 	}
 
@@ -896,6 +1019,8 @@ class ModelToolExchange1c extends Model {
 				,'tag'              => isset($product['tag']) ? $product['tag']: (isset($data['product_description'][$language_id]['tag']) ? $data['product_description'][$language_id]['tag']: '')
 			),
 		);
+
+		$result['product_description'][$language_id]['meta_title'] = isset($product['meta_title']) ? $product['meta_title']: (isset($data['product_description'][$language_id]['meta_title']) ? $data['product_description'][$language_id]['meta_title']: '');
 
 		if (isset($product['product_option'])) {
 			$product['product_option_id'] = '';

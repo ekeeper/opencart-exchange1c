@@ -1,10 +1,23 @@
 <?php
-// Version
-define('VERSION', '1.6.0');
 
+$remote_user = $_SERVER["REMOTE_USER"] 
+? $_SERVER["REMOTE_USER"] : $_SERVER["REDIRECT_REMOTE_USER"];
+$strTmp = base64_decode(substr($remote_user,6));
+if ($strTmp)
+list($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']) = explode(':', $strTmp);
 
 // Configuration
 require_once('../admin/config.php');
+
+// Version
+$version = 'UNKNOWN';
+$handle = fopen(DIR_APPLICATION.'/index.php','r');
+if ($handle){
+    while (($buffer = fgets($handle,4096)) !== false) if(preg_match('/VERSION/',$buffer) && !(preg_match('/^[\\t ]*\/\//',$buffer)) && (preg_match('/\d+(\.\d+)*/', $buffer, $version) > 0)) break;
+    if (is_array($version)) {
+        define('VERSION', $version[0]);
+    }else die("Version is $version");
+}
 
 if (file_exists('../vqmod/vqmod.php')) {
 	require_once('../vqmod/vqmod.php');
@@ -38,6 +51,10 @@ $registry->set('config', $config);
 // Database
 $db = new DB(DB_DRIVER, DB_HOSTNAME, DB_USERNAME, DB_PASSWORD, DB_DATABASE);
 $registry->set('db', $db);
+
+// Event
+$event = new Event($registry);
+$registry->set('event', $event);
 
 // Settings
 $query = $db->query("SELECT * FROM " . DB_PREFIX . "setting");
@@ -104,7 +121,7 @@ $registry->set('response', $response);
 $registry->set('session', new Session());
 
 // Cache
-$registry->set('cache', new Cache());
+$registry->set('cache', new Cache('file'));
 
 // Document
 $registry->set('document', new Document());
@@ -121,7 +138,7 @@ foreach ($query->rows as $result) {
 		'code'		=> $result['code'],
 		'locale'	=> $result['locale'],
 		'directory'	=> $result['directory'],
-		'filename'	=> $result['filename']
+		'filename'	=> (array_key_exists('filename',$result) ? $result['filename'] : false)
 	);
 }
 

@@ -3,46 +3,18 @@
 	<version><![CDATA[1.1]]></version>
 	<vqmver><![CDATA[]]></vqmver>
 	<author><![CDATA[zenwalker (http://zenwalker.ru/)]]></author>
-	
-	<file name="admin/model/catalog/attribute.php">
+
+	<file name="admin/controller/common/menu.php">
 		<operation>
-			<search position="before" offset="2"><![CDATA[public function editAttribute]]></search>
-			<add><![CDATA[return $attribute_id;]]></add>
-		</operation>
-	</file>
-	
-	<file name="admin/model/catalog/category.php">
-		<operation>
-			<search position="before" offset="2"><![CDATA[public function editCategory]]></search>
-			<add><![CDATA[return $category_id;]]></add>
-		</operation>
-	</file>
-	
-	<file name="admin/model/catalog/manufacturer.php">
-		<operation>
-			<search position="before" offset="2"><![CDATA[public function editManufacturer]]></search>
-			<add><![CDATA[return $manufacturer_id;]]></add>
-		</operation>
-	</file>
-	
-	<file name="admin/model/catalog/product.php">
-		<operation>
-			<search position="before" offset="2"><![CDATA[public function editProduct]]></search>
-			<add><![CDATA[return $product_id;]]></add>
+			<search position="after"><![CDATA[$data['feed'] = $this->url->link('extension/feed', 'token=' . $this->session->data['token'], 'SSL');]]></search>
+			<add><![CDATA[$data['exchange1c'] = $this->url->link('module/exchange1c', 'token=' . $this->session->data['token'], 'SSL');]]></add>
 		</operation>
 	</file>
 
-	<file name="admin/controller/common/header.php">
-		<operation>
-			<search position="after"><![CDATA[$this->data['feed'] = $this->url->link('extension/feed', 'token=' . $this->session->data['token'], 'SSL');]]></search>
-			<add><![CDATA[$this->data['exchange1c'] = $this->url->link('module/exchange1c', 'token=' . $this->session->data['token'], 'SSL');]]></add>
-		</operation>
-	</file>
-
-	<file name="admin/view/template/common/header.tpl">
+	<file name="admin/view/template/common/menu.tpl">
 		<operation>
 			<search position="after"><![CDATA[<li><a href="<?php echo $feed; ?>"><?php echo $text_feed; ?></a></li>]]></search>
-			<add><![CDATA[<li><a href="<?php echo $exchange1c; ?>">Opencart Exchange 1C</a></li>]]></add>
+			<add><![CDATA[<li><a href="<?php echo $exchange1c; ?>">Exchange 1C</a></li>]]></add>
 		</operation>
 	</file>
 
@@ -90,4 +62,30 @@
 			<add><![CDATA[$merge = $this->create($file, 'auto');]]></add>
 		</operation>
 	</file>
+
+	<file name="admin/model/sale/order.php">
+		<operation>
+			<search position="replace"><![CDATA[public function getTotalOrdersByStoreId($store_id) {]]></search>
+			<add><![CDATA[	public function getOrderStatus($order_id) {
+		$order_status_id = $this->db->query("SELECT order_status_id FROM `" . DB_PREFIX . "order` WHERE order_id = '" . (int)$order_id . "'");
+        $order_status = $this->db->query("SELECT name FROM `" . DB_PREFIX . "order_status` WHERE order_status_id = " . $order_status_id->row['order_status_id'] . " AND language_id = '" . (int)$this->config->get('config_language_id') . "'");
+
+        return $order_status->row['name'];
+    }     
+	
+	public function getOrderPay($order_id) {
+		$pay_status = $this->db->query("SELECT payment_method FROM `" . DB_PREFIX . "order` WHERE order_id = '" . (int)$order_id . "'");
+	
+        return $pay_status->row['payment_method'];
+    }     
+
+	public function getOrderShipping($order_id) {
+		$pay_status = $this->db->query("SELECT shipping_method FROM `" . DB_PREFIX . "order` WHERE order_id = '" . (int)$order_id . "'");
+	
+        return $pay_status->row['shipping_method'];
+    }     
+	
+	public function getTotalOrdersByStoreId($store_id) {]]></add>
+		</operation>
+	</file>	
 </modification>
