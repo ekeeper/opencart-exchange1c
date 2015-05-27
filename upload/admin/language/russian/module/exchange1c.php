@@ -5,6 +5,7 @@ $_['heading_title']		= 'Обмен данными с 1C v8.x';
 // Text
 $_['text_module']		= 'Модули';
 $_['text_success']		= 'Настройки модуля обновлены!';
+$_['text_edit']        = 'Настройки модуля';
 
 $_['text_tab_general']		= 'Основное';
 $_['text_tab_product']		= 'Выгрузка номенклатуры';

@@ -5,6 +5,7 @@ $_['heading_title']	= 'Exchange 1C v8.x';
 // Text
 $_['text_module']		= 'Modules';
 $_['text_success']		= 'Settings saved!';
+$_['text_edit']        = 'Module settings';
 
 $_['text_tab_general']		= 'General';
 $_['text_tab_product']		= 'Products';
