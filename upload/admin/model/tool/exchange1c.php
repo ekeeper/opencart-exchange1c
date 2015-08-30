@@ -976,7 +976,7 @@ class ModelToolExchange1c extends Model {
 			,'quantity'     => (isset($product['quantity'])) ? $product['quantity'] : (isset($data['quantity']) ? $data['quantity']: 0)
 			,'minimum'      => (isset($product['minimum'])) ? $product['minimum'] : (isset($data['minimum']) ? $data['minimum']: 1)
 			,'subtract'     => (isset($product['subtract'])) ? $product['subtract'] : (isset($data['subtract']) ? $data['subtract']: 1)
-			,'stock_status_id'  => $this->config->get('config_stock_status_id')
+			,'stock_status_id'  => (isset($product['stock_status_id'])) ? $product['stock_status_id'] : (isset($data['stock_status_id']) ? $data['stock_status_id']: $this->config->get('config_stock_status_id'))
 			,'shipping'         => (isset($product['shipping'])) ? $product['shipping'] : (isset($data['shipping']) ? $data['shipping']: 1)
 			,'keyword'          => (isset($product['keyword'])) ? $product['keyword'] : (isset($data['keyword']) ? $data['keyword']: '')
 			,'image'            => (isset($product['image'])) ? $product['image'] : (isset($data['image']) ? $data['image']: '')
