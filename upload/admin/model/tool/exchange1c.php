@@ -362,7 +362,7 @@ class ModelToolExchange1c extends Model {
 					if ($offer->Цены) {
 	
 						// Первая цена по умолчанию - $config_price_type_main
-						if (!$config_price_type_main['keyword']) {
+						if (empty($config_price_type_main['keyword'])) {
 							$data['price'] = (float)$offer->Цены->Цена->ЦенаЗаЕдиницу;
 						}
 						else {
