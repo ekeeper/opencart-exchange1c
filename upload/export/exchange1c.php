@@ -1,6 +1,6 @@
 <?php
 
-$remote_user = $_SERVER["REMOTE_USER"] 
+$remote_user = !empty($_SERVER["REMOTE_USER"]) 
 ? $_SERVER["REMOTE_USER"] : $_SERVER["REDIRECT_REMOTE_USER"];
 $strTmp = base64_decode(substr($remote_user,6));
 if ($strTmp)
@@ -63,7 +63,8 @@ foreach ($query->rows as $setting) {
 	if (!$setting['serialized']) {
 		$config->set($setting['key'], $setting['value']);
 	} else {
-		$config->set($setting['key'], unserialize($setting['value']));
+		$setting_unserialized = json_decode($setting['value'], true);
+		$config->set($setting['key'], $setting_unserialized === NULL ? unserialize($setting['value']) : $setting_unserialized);
 	}
 }
 
