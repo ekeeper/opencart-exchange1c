@@ -1,0 +1,35 @@
+<modification>
+	<id><![CDATA[exchange1c]]></id>
+	<version><![CDATA[1.1]]></version>
+	<vqmver><![CDATA[]]></vqmver>
+	<author><![CDATA[zenwalker (http://zenwalker.ru/)]]></author>
+
+	<file name="system/library/image.php">
+		<operation>
+			<search position="replace"><![CDATA[$this->mime = isset($info['mime']) ? $info['mime'] : '';]]></search>
+			<add><![CDATA[$this->mime = isset($info['mime']) ? $info['mime'] : 'image/png';]]></add>
+		</operation>
+		<operation info="add 'center' for watermark">
+			<search position="before"><![CDATA[case 'bottomright':]]></search>
+			<add><![CDATA[
+			case 'center':
+				$watermark_pos_x = ($this->info['width'])/3;
+				$watermark_pos_y = ($this->info['height'])/3;
+				break;
+			]]></add>
+		</operation>
+		<operation info="imagecopy to imagecopyresized">
+			<search position="replace"><![CDATA[imagecopy($this->image, $watermark->getImage(), $watermark_pos_x, $watermark_pos_y, 0, 0, $watermark->getWidth(), $watermark->getHeight());]]></search>
+			<add><![CDATA[
+			$new_watermark_width = $this->info['width'];
+			$new_watermark_height = $this->info['height'];
+			if ($watermark_width > 0) {
+				$new_watermark_width = $this->info['width'];
+				$new_watermark_height = $watermark_height * $this->info['width'] / $watermark_width;
+			}
+			imagecopyresized ($this->image , $watermark, 0, $watermark_pos_y, 0, 0, $new_watermark_width, $new_watermark_height, $watermark_width, $watermark_height);
+			]]></add>
+		</operation>
+	</file>
+
+</modification>
