@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 class ModelToolExchange1c extends Model {
 
@@ -113,20 +113,31 @@ class ModelToolExchange1c extends Model {
 					$product_counter++;
 				}
 
-				//Доставка
+				//Доставка и скидки
 
 				$totals = $this->model_sale_order->getOrderTotals($orders_data['order_id']);
+
+				$discout_counter = 0;
 
 				foreach ($totals as $total) {
 					if ($total['code']=='shipping') {
 
 						$document['Документ' . $document_counter]['Товары']['Товар' . $product_counter] = array(
-							 'Ид'         => ''
+							 'Ид'         	=> ''
 							,'Наименование' => 'Доставка'
 							,'ЦенаЗаЕдиницу'=> $total['value']
-							,'Количество' => 1
-							,'Сумма'       => $total['value']
+							,'Количество' 	=> 1
+							,'Сумма'       	=> $total['value']
 						);
+					} else if ($total['value'] < 0) {
+
+						$document['Документ' . $document_counter]['Скидки']['Скидка' . $discout_counter] = array(
+							 'Наименование'	=> $total['title']
+							,'Сумма' 		=> abs($total['value'])
+							,'УчтеноВСумме' => "false"
+						);
+
+						$discout_counter++;
 					}
 				}
 
