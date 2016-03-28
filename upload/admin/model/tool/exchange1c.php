@@ -188,11 +188,14 @@ class ModelToolExchange1c extends Model {
 
 		$exportFile = DIR_CACHE . 'exchange1c/orders.xml';
 
-		$handle = fopen($exportFile, 'w');
-		fwrite($handle, $xml->asXML());
-		fclose($handle);
+		$xml_data = $xml->asXML();
 
-		return $xml->asXML();
+		if ($handle = fopen($exportFile, 'w')) {
+			fwrite($handle, $xml_data);
+			fclose($handle);
+		}
+
+		return $xml_data;
 	}
 
 	public function queryOrdersStatus($params){
