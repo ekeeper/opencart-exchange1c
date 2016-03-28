@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 class ModelToolExchange1c extends Model {
 
@@ -6,6 +6,7 @@ class ModelToolExchange1c extends Model {
 	private $PROPERTIES = array();
 	private $PRODUCT_IDS = null;
 
+	private $HISTORY_COMMENT = 'Order status was updated by Exchange1C';
 
 	/**
 	 * Генерирует xml с заказами
@@ -20,9 +21,9 @@ class ModelToolExchange1c extends Model {
 		$this->load->model('sale/order');
 
 		if ($params['exchange_status'] != 0) {
-			$query = $this->db->query("SELECT order_id FROM `" . DB_PREFIX . "order` WHERE `order_status_id` = " . $params['exchange_status'] . "");
+			$query = $this->db->query("SELECT order_id, order_status_id FROM `" . DB_PREFIX . "order` WHERE `order_status_id` = " . $params['exchange_status'] . "");
 		} else {
-			$query = $this->db->query("SELECT order_id FROM `" . DB_PREFIX . "order` WHERE `date_added` >= '" . $params['from_date'] . "'");
+			$query = $this->db->query("SELECT order_id, order_status_id FROM `" . DB_PREFIX . "order` WHERE `date_added` >= '" . $params['from_date'] . "'");
 		}
 
 		$document = array();
@@ -170,11 +171,13 @@ class ModelToolExchange1c extends Model {
 					'Значение'=> $shipping_status,
 				);
 
-				$this->addOrderHistory($orders_data['order_id'], array(
-					'order_status_id' => $params['new_status'],
-					'comment'         => '',
-					'notify'          => $params['notify']
-				));			
+				if ((int)$orders_data['order_status_id'] != (int)$params['new_status']) {
+					$this->addOrderHistory($orders_data['order_id'], array(
+						'order_status_id' => $params['new_status'],
+						'comment'         => $params['notify'] ? '' : $this->HISTORY_COMMENT,
+						'notify'          => $params['notify']
+					));
+				}
 
 				$document_counter++;
 			}
@@ -183,24 +186,32 @@ class ModelToolExchange1c extends Model {
 		$root = '<?xml version="1.0" encoding="utf-8"?><КоммерческаяИнформация ВерсияСхемы="2.04" ДатаФормирования="' . date('Y-m-d', time()) . '" />';
 		$xml = $this->array_to_xml($document, new SimpleXMLElement($root));
 
+		$exportFile = DIR_CACHE . 'exchange1c/orders.xml';
+
+		$handle = fopen($exportFile, 'w');
+		fwrite($handle, $xml->asXML());
+		fclose($handle);
+
 		return $xml->asXML();
 	}
 
 	public function queryOrdersStatus($params){
 
 		if ($params['exchange_status'] != 0) {
-			$query = $this->db->query("SELECT order_id FROM `" . DB_PREFIX . "order` WHERE `order_status_id` = " . $params['exchange_status'] . "");
+			$query = $this->db->query("SELECT order_id, order_status_id FROM `" . DB_PREFIX . "order` WHERE `order_status_id` = " . $params['exchange_status'] . "");
 		} else {
-			$query = $this->db->query("SELECT order_id FROM `" . DB_PREFIX . "order` WHERE `date_added` >= '" . $params['from_date'] . "'");
+			$query = $this->db->query("SELECT order_id, order_status_id FROM `" . DB_PREFIX . "order` WHERE `date_added` >= '" . $params['from_date'] . "'");
 		}
 
 		if ($query->num_rows) {
 			foreach ($query->rows as $orders_data) {
-				$this->addOrderHistory($orders_data['order_id'], array(
-					'order_status_id' => $params['new_status'],
-					'comment'         => '',
-					'notify'          => $params['notify']
-				));
+				if ((int)$orders_data['order_status_id'] != (int)$params['new_status']) {
+					$this->addOrderHistory($orders_data['order_id'], array(
+						'order_status_id' => $params['new_status'],
+						'comment'         => $params['notify'] ? '' : $this->HISTORY_COMMENT,
+						'notify'          => $params['notify']
+					));
+				}
 			}
 		}
 
