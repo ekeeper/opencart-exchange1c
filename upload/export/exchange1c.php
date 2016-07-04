@@ -63,6 +63,7 @@ foreach ($query->rows as $setting) {
 	if (!$setting['serialized']) {
 		$config->set($setting['key'], $setting['value']);
 	} else {
+		$setting['value'] = str_replace( array("\r", "\n"), array('\r', '\n'), $setting['value'] );
 		$setting_unserialized = json_decode($setting['value'], true);
 		$config->set($setting['key'], $setting_unserialized === NULL ? unserialize($setting['value']) : $setting_unserialized);
 	}
